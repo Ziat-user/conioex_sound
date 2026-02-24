@@ -1,15 +1,33 @@
-#define CONIOEX
-#include "conioex.h"
+//#define CONIOEX
+//#include "conioex.h"
 #include <chrono>
 #include <cstdio>
-#include <thread>
+//#include <thread>
 #include "sound.h"
+#include <conio.h>
 #include <windows.h> //Windowsの機能を呼ぶため
+
+#pragma comment(lib, "winmm.lib")
+
+void gotoxy(int x, int y) {
+    COORD coord;
+    coord.X = x;
+    coord.Y = y;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}//conioexにおけるgotoxy
+
+void hideCursor() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE; // FALSEで非表示、TRUEで表示
+    SetConsoleCursorInfo(consoleHandle, &info);
+}//conioexにおけるsetcursoltype
 
 int main() {
     auto fps_s = std::chrono::milliseconds(1000 / 60);
     auto last = std::chrono::steady_clock::now();
-    setcursortype(NOCURSOR);
+    hideCursor();
     
     int frame_count = 0;
     int current_fps = 0;
@@ -17,13 +35,14 @@ int main() {
     /*unsigned long long handle = opensound("test_sound_stock.wav");*/
 
     bool is_space_pressed = false;
-
-    while (!inport(PK_ESC)) {
+    char ch = 0;
+    while (ch != 0x1b) {
+        
         auto now = std::chrono::steady_clock::now();
 
         // 前回から指定した時間が経過しているか判定
         if (now - last >= fps_s) {
-            gotoxy(1, 1);
+            gotoxy(0, 0);
             last = now;
 
             // FPSの計算（1秒ごとに更新）
@@ -33,47 +52,26 @@ int main() {
                 frame_count = 0;
                 last_fps_time = now;
             }
-
+            printf("FPS: %d    \n", current_fps);
             // スペースキーの入力判定
-            if (inport(VK_SPACE)) {
-                printf("enter space\n");
+            // _kbhit/_getch のブロックを丸ごとこれに置き換え
+            if (_kbhit()) ch = _getch(); // ESC検出用だけ残す
 
-                // 前のフレームで押されていなかった場合のみ処理する
+            bool space_now = (GetAsyncKeyState(VK_SPACE) & 0x8000) != 0;
+
+            if (space_now) {
+                printf("enter space\n");
                 if (!is_space_pressed) {
                     is_space_pressed = true;
                     PlaySoundW((LPCWSTR)my_wav_data, NULL, SND_MEMORY | SND_ASYNC);
-                    // SND_MEMORY : ファイルではなく、メモリ(配列)のデータを使う
-                    // SND_ASYNC  : 処理を止めず、裏側で勝手に再生させる(FPS低下を防ぐ)
-                    //conioexのplaysoundよりも、軽い
-                    {
-                        /*
-                        * 以下オプション
-                        * SND_MEMORY   : C言語の配列（unsigned char[]）などに変換したWAVデータを指定します。
-                        * SND_FILENAME : "sound.wav" のように直接ファイルパスを指定して再生します。
-                        * SND_RESOURCE : Visual Studioなどで .rc ファイルを使ってexeに埋め込んだ音声を再生します。（配列化の別ルートのようなものです）
-                        * SND_ALIAS    : Windowsのシステム音（"SystemStart" など）を鳴らしたい時に使います。
-                        * 
-                        * SND_ASYNC    : 音の再生をWindowsに任せ、プログラムはすぐに次の行へ進みます。FPSが落ちません。
-                        * SND_SYNC     : （デフォルト設定）音が鳴り終わるまで、プログラムがそこでフリーズしたように止まります。
-                        * SND_LOOP     : 音が最後までいったら自動で最初から再生します。BGMに最適です。※必ず SND_ASYNC とセットで使います。（SND_SYNCと混ぜると一生プログラムが止まります）
-                        * 
-                        * SND_NODEFAULT: 指定したファイルや配列が見つからなかった時、Windows標準の「ポーン」という警告音を勝手に鳴らさないようにします。
-                        * SND_NOSTOP   : すでに PlaySound で別の音が鳴っている場合、後から呼ばれたこの音をキャンセル（鳴らさない）します。（連打による音の途切れを防ぐ時に使います）
-                        * SND_PURGE    : 再生中の音を止めます。
-                        * 
-                        * オプションフラグは `|` (ビットor演算子)でつなげます。
-                        * PlaySound(NULL, NULL, 0); でSND_PURGEと同じ事ができます。
-                        * PlaySound は「同時に1つの音」しか鳴らせないというWindowsの仕様があります。 もし「BGMを鳴らしながら、ジャンプ音も鳴らしたい（和音・複数再生）」という場合は、別の方法が必要です。
-                        */
-                    }
                 }
             }
             else {
-                // スペースキーを離したらフラグを戻す
-                is_space_pressed = false;
-                printf("            \n");
+                if (is_space_pressed) {
+                    is_space_pressed = false;
+                    printf("            \n");
+                }
             }
-            printf("FPS: %d    \n", current_fps);
         }
     }
     /*closesound(handle);*/

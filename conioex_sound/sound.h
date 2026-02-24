@@ -5,7 +5,7 @@
 * https://www.springin.org/sound-stock/
 * 今回の音はこちらのサイトから使用しています
 * 
-* また、mp3で再生するよりもwavで再生したほうが軽いです。
+* また、mp3で再生するよりもwavで再生したほうが軽いです。(WINDOWS標準APIを使う場合)
 * mp3のデータしか所有していない場合は、何かしらの変換で、wavデータにすることを推奨します。
 */
 const unsigned char my_wav_data[] = {
